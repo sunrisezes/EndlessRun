@@ -266,9 +266,9 @@ export class HUD {
     statsBox.style.whiteSpace = 'nowrap';
 
     statsBox.innerHTML = `
-      <div id="hud-dist" style="font-size: clamp(14px, 3.5vw, 17px); font-weight: 900; color: #00f0ff;">0 m</div>
-      <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
-      <div id="hud-coins" style="font-size: clamp(13px, 3vw, 15px); font-weight: 800; color: #f59e0b;">0 🪙</div>
+      <div id="hud-dist" style="font-size: 16px; font-weight: 900; color: #00f0ff; text-shadow: 0 0 10px rgba(0,240,255,0.6); display: inline-block; white-space: nowrap;">0 m</div>
+      <div style="width: 1px; height: 16px; background: rgba(56, 189, 248, 0.4);"></div>
+      <div id="hud-coins" style="font-size: 15px; font-weight: 800; color: #f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.5); display: inline-block; white-space: nowrap;">0 🪙</div>
     `;
 
     // 3. TOP-RIGHT CORNER: Audio Control Buttons (🔊 Mute & ⚙️ Settings)
