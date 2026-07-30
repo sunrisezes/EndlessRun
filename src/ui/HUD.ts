@@ -12,7 +12,7 @@ export class HUD {
   private inGameHUD: HTMLElement;
   private gameOverOverlay: HTMLElement;
   private audioSettingsModal!: HTMLElement;
-  private themeSelectorPanel!: HTMLElement;
+  private mapDropdownMenu!: HTMLElement;
   private touchControlsContainer!: HTMLElement;
 
   // Element References
@@ -38,15 +38,15 @@ export class HUD {
     this.inGameHUD = this.createInGameHUD();
     this.gameOverOverlay = this.createGameOverOverlay();
     this.createAudioSettingsModal();
-    this.createThemeSelectorPanel();
+    this.createMapDropdownMenu();
 
     this.container.appendChild(this.startMenuOverlay);
     this.container.appendChild(this.inGameHUD);
     this.container.appendChild(this.gameOverOverlay);
     this.container.appendChild(this.audioSettingsModal);
-    this.container.appendChild(this.themeSelectorPanel);
+    this.container.appendChild(this.mapDropdownMenu);
 
-    // Initial State: Show Start Menu & Theme Selector
+    // Initial State: Show Start Menu
     this.showStartMenu();
 
     // Listen to Keyboard shortcuts (Space/Enter for start, R for restart)
@@ -54,13 +54,15 @@ export class HUD {
       if (
         (e.code === 'Space' || e.code === 'Enter') &&
         this.startMenuOverlay.style.display !== 'none' &&
-        this.audioSettingsModal.style.display === 'none'
+        this.audioSettingsModal.style.display === 'none' &&
+        this.mapDropdownMenu.style.display === 'none'
       ) {
         this.handleStartClick();
       } else if (
         e.code === 'KeyR' &&
         this.gameOverOverlay.style.display !== 'none' &&
-        this.audioSettingsModal.style.display === 'none'
+        this.audioSettingsModal.style.display === 'none' &&
+        this.mapDropdownMenu.style.display === 'none'
       ) {
         this.handleRestartClick();
       }
@@ -74,29 +76,29 @@ export class HUD {
     el.style.top = '50%';
     el.style.left = '50%';
     el.style.transform = 'translate(-50%, -50%)';
-    el.style.width = '92%';
-    el.style.maxWidth = '460px';
-    el.style.maxHeight = '85vh';
+    el.style.width = '90%';
+    el.style.maxWidth = '440px';
+    el.style.maxHeight = '80vh';
     el.style.overflowY = 'auto';
-    el.style.padding = 'clamp(16px, 4vw, 32px)';
+    el.style.padding = 'clamp(16px, 4vw, 28px)';
     el.style.textAlign = 'center';
     el.style.color = '#ffffff';
 
     el.innerHTML = `
-      <div style="font-size: clamp(22px, 6vw, 32px); font-weight: 900; letter-spacing: 2px; color: #00f0ff; text-shadow: 0 0 16px rgba(0,240,255,0.6); margin-bottom: 8px;">
+      <div style="font-size: clamp(22px, 6vw, 30px); font-weight: 900; letter-spacing: 2px; color: #00f0ff; text-shadow: 0 0 16px rgba(0,240,255,0.6); margin-bottom: 6px;">
         CYBER RUNNER 3D
       </div>
-      <div style="font-size: clamp(12px, 3.5vw, 14px); color: #94a3b8; margin-bottom: 20px;">High-Speed Procedural PBR Runner</div>
+      <div style="font-size: clamp(12px, 3.5vw, 14px); color: #94a3b8; margin-bottom: 16px;">High-Speed Procedural PBR Runner</div>
 
-      <div style="background: rgba(2, 6, 23, 0.6); padding: clamp(12px, 3vw, 16px); border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 20px; text-align: left; font-size: clamp(11px, 3vw, 13px); line-height: 1.6;">
-        <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">CONTROLS:</div>
+      <div style="background: rgba(2, 6, 23, 0.6); padding: clamp(10px, 3vw, 14px); border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 18px; text-align: left; font-size: clamp(11px, 3vw, 13px); line-height: 1.5;">
+        <div style="color: #38bdf8; font-weight: bold; margin-bottom: 4px;">CONTROLS:</div>
         <div>🎮 <b>A / D</b> or <b>Left / Right</b> : Switch Lane</div>
         <div>🚀 <b>W / Up / Space</b> : Jump</div>
         <div>🛡️ <b>S / Down</b> : Slide</div>
-        <div>🗺️ <b>Select Moving Video Themes</b> on the Left Panel</div>
+        <div>🗺️ <b>Tap 🗺️ MAPS Icon</b> on Top-Left to switch maps</div>
       </div>
 
-      <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+      <div style="display: flex; gap: 10px;">
         <button id="start-btn" style="
           flex: 1;
           padding: clamp(12px, 3vw, 16px);
@@ -113,82 +115,69 @@ export class HUD {
         ">
           START RUN
         </button>
-
-        <button id="start-audio-btn" style="
-          padding: clamp(12px, 3vw, 16px);
-          font-size: 18px;
-          background: rgba(30, 41, 59, 0.8);
-          color: #38bdf8;
-          border: 1px solid rgba(56, 189, 248, 0.4);
-          border-radius: 10px;
-          cursor: pointer;
-        " title="Audio Settings">
-          ⚙️
-        </button>
       </div>
     `;
 
     setTimeout(() => {
       const btn = el.querySelector('#start-btn');
       btn?.addEventListener('click', () => this.handleStartClick());
-
-      const audioBtn = el.querySelector('#start-audio-btn');
-      audioBtn?.addEventListener('click', () => this.openAudioSettings());
     }, 0);
 
     return el;
   }
 
-  // --- Left-Side Theme Selector Sidebar Section ---
+  // --- Collapsible Map Dropdown Menu Component ---
 
-  private createThemeSelectorPanel(): void {
-    this.themeSelectorPanel = document.createElement('div');
-    this.themeSelectorPanel.className = 'theme-selector-panel';
-    this.applyGlassStyle(this.themeSelectorPanel);
-    this.themeSelectorPanel.style.position = 'absolute';
-    this.themeSelectorPanel.style.top = '16px';
-    this.themeSelectorPanel.style.left = '16px';
-    this.themeSelectorPanel.style.width = '200px';
-    this.themeSelectorPanel.style.maxHeight = 'calc(100vh - 32px)';
-    this.themeSelectorPanel.style.overflowY = 'auto';
-    this.themeSelectorPanel.style.padding = '12px';
-    this.themeSelectorPanel.style.zIndex = '140';
-    this.themeSelectorPanel.style.color = '#ffffff';
+  private createMapDropdownMenu(): void {
+    this.mapDropdownMenu = document.createElement('div');
+    this.mapDropdownMenu.className = 'map-dropdown-menu';
+    this.applyGlassStyle(this.mapDropdownMenu);
+    this.mapDropdownMenu.style.position = 'absolute';
+    this.mapDropdownMenu.style.top = '64px';
+    this.mapDropdownMenu.style.left = '16px';
+    this.mapDropdownMenu.style.width = 'min(240px, 85vw)';
+    this.mapDropdownMenu.style.maxHeight = '70vh';
+    this.mapDropdownMenu.style.overflowY = 'auto';
+    this.mapDropdownMenu.style.padding = '12px';
+    this.mapDropdownMenu.style.zIndex = '250';
+    this.mapDropdownMenu.style.color = '#ffffff';
+    this.mapDropdownMenu.style.display = 'none'; // Hidden by default until 🗺️ MAPS button is tapped!
 
-    this.renderThemeCards();
+    this.renderMapDropdownItems();
   }
 
-  private renderThemeCards(): void {
+  private renderMapDropdownItems(): void {
     const activeThemeId = this.themeManager.currentTheme.id;
 
     let html = `
       <div style="font-size: 13px; font-weight: 800; color: #00f0ff; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
         <span>🗺️ SELECT MAP</span>
+        <button id="close-map-dropdown" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 2px 6px;">✖</button>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
     `;
 
     ThemeManager.THEMES.forEach((theme) => {
       const isActive = theme.id === activeThemeId;
       const activeBorder = isActive
-        ? 'border: 2px solid #00f0ff; background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 12px rgba(0,240,255,0.4);'
-        : 'border: 1px solid rgba(255,255,255,0.15); background: rgba(2, 6, 23, 0.6);';
+        ? 'border: 2px solid #00f0ff; background: rgba(0, 240, 255, 0.25); box-shadow: 0 0 12px rgba(0,240,255,0.4);'
+        : 'border: 1px solid rgba(255,255,255,0.15); background: rgba(2, 6, 23, 0.7);';
 
       html += `
-        <button class="theme-card-btn" data-theme="${theme.id}" style="
+        <button class="map-item-btn" data-theme="${theme.id}" style="
           padding: 8px 10px;
           border-radius: 8px;
           ${activeBorder}
           color: #ffffff;
           cursor: pointer;
           text-align: left;
-          transition: all 0.2s ease;
+          transition: all 0.15s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         ">
           <span style="font-size: 18px;">${theme.icon}</span>
-          <div style="overflow: hidden;">
+          <div style="overflow: hidden; flex: 1;">
             <div style="font-size: 12px; font-weight: 800; color: ${isActive ? '#00f0ff' : '#e2e8f0'}; text-overflow: ellipsis; white-space: nowrap;">
               ${theme.name}
             </div>
@@ -201,21 +190,30 @@ export class HUD {
     });
 
     html += `</div>`;
-    this.themeSelectorPanel.innerHTML = html;
+    this.mapDropdownMenu.innerHTML = html;
 
-    // Attach click listeners to theme cards
     setTimeout(() => {
-      const cardBtns = this.themeSelectorPanel.querySelectorAll('.theme-card-btn');
-      cardBtns.forEach((btn) => {
+      const closeBtn = this.mapDropdownMenu.querySelector('#close-map-dropdown');
+      closeBtn?.addEventListener('click', () => this.toggleMapDropdown(false));
+
+      const mapBtns = this.mapDropdownMenu.querySelectorAll('.map-item-btn');
+      mapBtns.forEach((btn) => {
         btn.addEventListener('click', (e) => {
           const themeId = (e.currentTarget as HTMLElement).getAttribute('data-theme');
           if (themeId) {
             this.themeManager.setTheme(themeId);
-            this.renderThemeCards(); // re-render to update active border highlight
+            this.renderMapDropdownItems();
+            this.toggleMapDropdown(false); // Auto-close menu after selecting map!
           }
         });
       });
     }, 0);
+  }
+
+  private toggleMapDropdown(show?: boolean): void {
+    const isCurrentlyVisible = this.mapDropdownMenu.style.display !== 'none';
+    const nextState = show !== undefined ? show : !isCurrentlyVisible;
+    this.mapDropdownMenu.style.display = nextState ? 'block' : 'none';
   }
 
   private createInGameHUD(): HTMLElement {
@@ -229,40 +227,64 @@ export class HUD {
     el.style.pointerEvents = 'none';
     el.style.zIndex = '100';
 
-    // Top Header Bar
+    // Top Main Header Bar (Left Stats & Maps, Right Volume Controls)
     const topBar = document.createElement('div');
     topBar.style.position = 'absolute';
-    topBar.style.top = '16px';
-    topBar.style.left = '230px'; // Offset to sit next to left theme sidebar
-    topBar.style.right = '16px';
+    topBar.style.top = '14px';
+    topBar.style.left = '14px';
+    topBar.style.right = '14px';
     topBar.style.display = 'flex';
     topBar.style.justifyContent = 'space-between';
     topBar.style.alignItems = 'flex-start';
 
-    // Left Stats Panel
-    const leftPanel = document.createElement('div');
-    this.applyGlassStyle(leftPanel);
-    leftPanel.style.padding = '10px 16px';
-    leftPanel.style.color = '#ffffff';
+    // Top-Left Panel (🗺️ MAPS Button + Distance & Coins Stats)
+    const topLeftContainer = document.createElement('div');
+    topLeftContainer.style.pointerEvents = 'auto';
+    topLeftContainer.style.display = 'flex';
+    topLeftContainer.style.alignItems = 'center';
+    topLeftContainer.style.gap = '8px';
 
-    leftPanel.innerHTML = `
-      <div id="hud-dist" style="font-size: clamp(16px, 4vw, 20px); font-weight: 900; color: #00f0ff;">0 m</div>
-      <div id="hud-coins" style="font-size: clamp(13px, 3vw, 15px); font-weight: 700; color: #f59e0b; margin-top: 2px;">0 🪙</div>
+    // 🗺️ MAPS Toggle Button
+    const mapToggleBtn = document.createElement('button');
+    this.applyGlassStyle(mapToggleBtn);
+    mapToggleBtn.style.padding = '8px 12px';
+    mapToggleBtn.style.color = '#00f0ff';
+    mapToggleBtn.style.fontSize = '13px';
+    mapToggleBtn.style.fontWeight = '800';
+    mapToggleBtn.style.cursor = 'pointer';
+    mapToggleBtn.style.display = 'flex';
+    mapToggleBtn.style.alignItems = 'center';
+    mapToggleBtn.style.gap = '4px';
+    mapToggleBtn.innerHTML = `🗺️ <span style="font-size: 11px;">MAPS</span>`;
+    mapToggleBtn.addEventListener('click', () => this.toggleMapDropdown());
+
+    // Stats Box (Distance & Coins)
+    const statsBox = document.createElement('div');
+    this.applyGlassStyle(statsBox);
+    statsBox.style.padding = '6px 12px';
+    statsBox.style.color = '#ffffff';
+
+    statsBox.innerHTML = `
+      <div id="hud-dist" style="font-size: clamp(14px, 3.5vw, 18px); font-weight: 900; color: #00f0ff;">0 m</div>
+      <div id="hud-coins" style="font-size: clamp(12px, 3vw, 14px); font-weight: 700; color: #f59e0b; margin-top: 1px;">0 🪙</div>
     `;
 
-    // Right Controls / Audio Panel
-    const rightPanel = document.createElement('div');
-    this.applyGlassStyle(rightPanel);
-    rightPanel.style.padding = '6px 10px';
-    rightPanel.style.pointerEvents = 'auto';
-    rightPanel.style.display = 'flex';
-    rightPanel.style.gap = '6px';
-    rightPanel.style.alignItems = 'center';
+    topLeftContainer.appendChild(mapToggleBtn);
+    topLeftContainer.appendChild(statsBox);
+
+    // Top-Right Panel (🔊 Mute & ⚙️ Volume Settings Buttons)
+    const topRightContainer = document.createElement('div');
+    this.applyGlassStyle(topRightContainer);
+    topRightContainer.style.padding = '6px 10px';
+    topRightContainer.style.pointerEvents = 'auto';
+    topRightContainer.style.display = 'flex';
+    topRightContainer.style.gap = '6px';
+    topRightContainer.style.alignItems = 'center';
 
     this.muteBtn = document.createElement('button');
     this.muteBtn.style.background = 'transparent';
     this.muteBtn.style.border = 'none';
-    this.muteBtn.style.fontSize = '20px';
+    this.muteBtn.style.fontSize = '18px';
     this.muteBtn.style.cursor = 'pointer';
     this.muteBtn.innerText = '🔊';
     this.muteBtn.title = 'Toggle Mute';
@@ -274,29 +296,30 @@ export class HUD {
     const settingsBtn = document.createElement('button');
     settingsBtn.style.background = 'transparent';
     settingsBtn.style.border = 'none';
-    settingsBtn.style.fontSize = '20px';
+    settingsBtn.style.fontSize = '18px';
     settingsBtn.style.cursor = 'pointer';
     settingsBtn.innerText = '⚙️';
     settingsBtn.title = 'Volume & Audio Settings';
     settingsBtn.addEventListener('click', () => this.openAudioSettings());
 
-    rightPanel.appendChild(this.muteBtn);
-    rightPanel.appendChild(settingsBtn);
+    topRightContainer.appendChild(this.muteBtn);
+    topRightContainer.appendChild(settingsBtn);
+
+    topBar.appendChild(topLeftContainer);
+    topBar.appendChild(topRightContainer);
+    el.appendChild(topBar);
 
     // Active Powerups Bar Container
     this.powerupsContainer = document.createElement('div');
     this.powerupsContainer.style.position = 'absolute';
-    this.powerupsContainer.style.top = '64px';
-    this.powerupsContainer.style.left = '0px';
+    this.powerupsContainer.style.top = '68px';
+    this.powerupsContainer.style.left = '14px';
     this.powerupsContainer.style.display = 'flex';
     this.powerupsContainer.style.flexDirection = 'column';
-    this.powerupsContainer.style.gap = '6px';
+    this.powerupsContainer.style.gap = '5px';
+    this.powerupsContainer.style.pointerEvents = 'none';
 
-    leftPanel.appendChild(this.powerupsContainer);
-
-    topBar.appendChild(leftPanel);
-    topBar.appendChild(rightPanel);
-    el.appendChild(topBar);
+    el.appendChild(this.powerupsContainer);
 
     // Mobile & Tablet Touch Control Pad Overlay
     this.touchControlsContainer = document.createElement('div');
@@ -333,8 +356,8 @@ export class HUD {
 
     el.appendChild(this.touchControlsContainer);
 
-    this.distanceText = leftPanel.querySelector('#hud-dist')!;
-    this.coinsText = leftPanel.querySelector('#hud-coins')!;
+    this.distanceText = statsBox.querySelector('#hud-dist')!;
+    this.coinsText = statsBox.querySelector('#hud-coins')!;
 
     return el;
   }
@@ -346,22 +369,22 @@ export class HUD {
     el.style.top = '50%';
     el.style.left = '50%';
     el.style.transform = 'translate(-50%, -50%)';
-    el.style.width = '92%';
-    el.style.maxWidth = '420px';
-    el.style.maxHeight = '85vh';
+    el.style.width = '90%';
+    el.style.maxWidth = '400px';
+    el.style.maxHeight = '80vh';
     el.style.overflowY = 'auto';
-    el.style.padding = 'clamp(16px, 4vw, 32px)';
+    el.style.padding = 'clamp(16px, 4vw, 28px)';
     el.style.textAlign = 'center';
     el.style.color = '#ffffff';
 
     el.innerHTML = `
-      <div style="font-size: clamp(22px, 6vw, 28px); font-weight: 900; color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.6); margin-bottom: 16px;">
+      <div style="font-size: clamp(22px, 6vw, 28px); font-weight: 900; color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.6); margin-bottom: 14px;">
         GAME OVER
       </div>
 
-      <div style="background: rgba(2, 6, 23, 0.6); padding: clamp(12px, 3vw, 16px); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3); margin-bottom: 20px; text-align: left;">
-        <div style="font-size: 13px; color: #94a3b8;">FINAL DISTANCE:</div>
-        <div id="go-final-score" style="font-size: clamp(20px, 5vw, 24px); font-weight: 900; color: #00f0ff; margin-bottom: 10px;">0 m</div>
+      <div style="background: rgba(2, 6, 23, 0.6); padding: clamp(10px, 3vw, 14px); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3); margin-bottom: 18px; text-align: left;">
+        <div style="font-size: 12px; color: #94a3b8;">FINAL DISTANCE:</div>
+        <div id="go-final-score" style="font-size: clamp(18px, 5vw, 24px); font-weight: 900; color: #00f0ff; margin-bottom: 8px;">0 m</div>
 
         <div style="display: flex; justify-content: space-between; font-size: clamp(12px, 3.2vw, 14px); color: #cbd5e1;">
           <div>HIGH SCORE: <b id="go-high-score" style="color: #f59e0b;">0 m</b></div>
@@ -369,7 +392,7 @@ export class HUD {
         </div>
       </div>
 
-      <div style="display: flex; gap: 12px;">
+      <div style="display: flex; gap: 10px;">
         <button id="restart-btn" style="
           flex: 1;
           padding: clamp(12px, 3vw, 16px);
@@ -386,27 +409,12 @@ export class HUD {
         ">
           PLAY AGAIN
         </button>
-
-        <button id="go-audio-btn" style="
-          padding: clamp(12px, 3vw, 16px);
-          font-size: 18px;
-          background: rgba(30, 41, 59, 0.8);
-          color: #38bdf8;
-          border: 1px solid rgba(56, 189, 248, 0.4);
-          border-radius: 10px;
-          cursor: pointer;
-        " title="Audio Settings">
-          ⚙️
-        </button>
       </div>
     `;
 
     setTimeout(() => {
       const btn = el.querySelector('#restart-btn');
       btn?.addEventListener('click', () => this.handleRestartClick());
-
-      const audioBtn = el.querySelector('#go-audio-btn');
-      audioBtn?.addEventListener('click', () => this.openAudioSettings());
     }, 0);
 
     this.finalScoreText = el.querySelector('#go-final-score')!;
@@ -424,26 +432,26 @@ export class HUD {
     this.audioSettingsModal.style.top = '50%';
     this.audioSettingsModal.style.left = '50%';
     this.audioSettingsModal.style.transform = 'translate(-50%, -50%)';
-    this.audioSettingsModal.style.width = '92%';
-    this.audioSettingsModal.style.maxWidth = '400px';
-    this.audioSettingsModal.style.maxHeight = '85vh';
+    this.audioSettingsModal.style.width = '90%';
+    this.audioSettingsModal.style.maxWidth = '380px';
+    this.audioSettingsModal.style.maxHeight = '80vh';
     this.audioSettingsModal.style.overflowY = 'auto';
     this.audioSettingsModal.style.padding = 'clamp(16px, 4vw, 24px)';
     this.audioSettingsModal.style.color = '#ffffff';
     this.audioSettingsModal.style.display = 'none';
-    this.audioSettingsModal.style.zIndex = '200';
+    this.audioSettingsModal.style.zIndex = '300';
 
     const masterVal = Math.round(this.audioManager.getMasterVolume() * 100);
     const bgmVal = Math.round(this.audioManager.getBgmVolume() * 100);
     const sfxVal = Math.round(this.audioManager.getSfxVolume() * 100);
 
     this.audioSettingsModal.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <div style="font-size: clamp(16px, 4.5vw, 20px); font-weight: 800; color: #00f0ff;">🔊 AUDIO SETTINGS</div>
-        <button id="close-audio-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✖</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="font-size: clamp(16px, 4.5vw, 18px); font-weight: 800; color: #00f0ff;">🔊 AUDIO SETTINGS</div>
+        <button id="close-audio-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✖</button>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 14px; font-size: clamp(12px, 3.2vw, 14px);">
+      <div style="display: flex; flex-direction: column; gap: 12px; font-size: clamp(12px, 3.2vw, 14px);">
         <!-- Master Volume -->
         <div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -473,7 +481,7 @@ export class HUD {
 
         <!-- Mute Toggle -->
         <button id="modal-mute-btn" style="
-          margin-top: 6px;
+          margin-top: 4px;
           padding: 10px;
           background: rgba(30, 41, 59, 0.8);
           border: 1px solid rgba(56, 189, 248, 0.3);
@@ -534,11 +542,11 @@ export class HUD {
 
   private applyGlassStyle(el: HTMLElement): void {
     el.style.position = 'absolute';
-    el.style.background = 'rgba(15, 23, 42, 0.85)';
+    el.style.background = 'rgba(15, 23, 42, 0.88)';
     el.style.backdropFilter = 'blur(16px)';
     (el.style as unknown as Record<string, string>).webkitBackdropFilter = 'blur(16px)';
     el.style.border = '1px solid rgba(56, 189, 248, 0.3)';
-    el.style.borderRadius = '16px';
+    el.style.borderRadius = '14px';
     el.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.6)';
     el.style.zIndex = '100';
   }
@@ -548,6 +556,7 @@ export class HUD {
     this.inGameHUD.style.display = 'block';
     this.gameOverOverlay.style.display = 'none';
     this.closeAudioSettings();
+    this.toggleMapDropdown(false);
     if (this.onStartGame) this.onStartGame();
   }
 
@@ -555,13 +564,13 @@ export class HUD {
     this.gameOverOverlay.style.display = 'none';
     this.inGameHUD.style.display = 'block';
     this.closeAudioSettings();
+    this.toggleMapDropdown(false);
     if (this.onRestartGame) this.onRestartGame();
   }
 
   public showStartMenu(): void {
     this.startMenuOverlay.style.display = 'block';
-    this.themeSelectorPanel.style.display = 'block';
-    this.inGameHUD.style.display = 'none';
+    this.inGameHUD.style.display = 'block'; // Top HUD bar (MAPS button & Audio settings) stays accessible!
     this.gameOverOverlay.style.display = 'none';
   }
 
@@ -576,8 +585,7 @@ export class HUD {
     this.highScoreText.innerText = `${state.highScore} m`;
     this.coinsEarnedText.innerText = `${coins} 🪙`;
 
-    this.inGameHUD.style.display = 'none';
-    this.themeSelectorPanel.style.display = 'block';
+    this.inGameHUD.style.display = 'block'; // Keep top bar accessible on game over screen
     this.gameOverOverlay.style.display = 'block';
   }
 
@@ -595,7 +603,7 @@ export class HUD {
   ): void {
     const displayDistance = distance * multiplier;
     this.distanceText.innerHTML = `${displayDistance} m ${
-      multiplier > 1 ? '<span style="color:#a855f7; font-size:12px;">[2X]</span>' : ''
+      multiplier > 1 ? '<span style="color:#a855f7; font-size:11px;">[2X]</span>' : ''
     }`;
     this.coinsText.innerText = `${coins} 🪙`;
 
@@ -621,20 +629,20 @@ export class HUD {
 
   private addPowerUpBadge(label: string, progressRatio: number, color: string): void {
     const badge = document.createElement('div');
-    badge.style.background = 'rgba(2, 6, 23, 0.7)';
+    badge.style.background = 'rgba(2, 6, 23, 0.75)';
     badge.style.border = `1px solid ${color}`;
     badge.style.borderRadius = '6px';
     badge.style.padding = '3px 6px';
     badge.style.fontSize = '11px';
     badge.style.fontWeight = 'bold';
     badge.style.color = color;
-    badge.style.width = '130px';
+    badge.style.width = '120px';
     badge.style.overflow = 'hidden';
 
     const bar = document.createElement('div');
     bar.style.height = '3px';
     bar.style.background = color;
-    bar.style.marginTop = '3px';
+    bar.style.marginTop = '2px';
     bar.style.borderRadius = '2px';
     bar.style.width = `${Math.min(100, progressRatio * 100)}%`;
     bar.style.transition = 'width 0.1s linear';
