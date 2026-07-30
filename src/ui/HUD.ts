@@ -77,7 +77,7 @@ export class HUD {
     el.style.left = '50%';
     el.style.transform = 'translate(-50%, -50%)';
     el.style.width = '90%';
-    el.style.maxWidth = '440px';
+    el.style.maxWidth = '420px';
     el.style.maxHeight = '80vh';
     el.style.overflowY = 'auto';
     el.style.padding = 'clamp(16px, 4vw, 28px)';
@@ -95,7 +95,7 @@ export class HUD {
         <div>🎮 <b>A / D</b> or <b>Left / Right</b> : Switch Lane</div>
         <div>🚀 <b>W / Up / Space</b> : Jump</div>
         <div>🛡️ <b>S / Down</b> : Slide</div>
-        <div>🗺️ <b>Tap 🗺️ MAPS Icon</b> on Top-Left to switch maps</div>
+        <div>🗺️ <b>Tap 🗺️ MAPS Icon</b> on Top-Left to open dropdown</div>
       </div>
 
       <div style="display: flex; gap: 10px;">
@@ -133,15 +133,15 @@ export class HUD {
     this.mapDropdownMenu.className = 'map-dropdown-menu';
     this.applyGlassStyle(this.mapDropdownMenu);
     this.mapDropdownMenu.style.position = 'absolute';
-    this.mapDropdownMenu.style.top = '64px';
-    this.mapDropdownMenu.style.left = '16px';
+    this.mapDropdownMenu.style.top = '54px';
+    this.mapDropdownMenu.style.left = '12px';
     this.mapDropdownMenu.style.width = 'min(240px, 85vw)';
     this.mapDropdownMenu.style.maxHeight = '70vh';
     this.mapDropdownMenu.style.overflowY = 'auto';
     this.mapDropdownMenu.style.padding = '12px';
     this.mapDropdownMenu.style.zIndex = '250';
     this.mapDropdownMenu.style.color = '#ffffff';
-    this.mapDropdownMenu.style.display = 'none'; // Hidden by default until 🗺️ MAPS button is tapped!
+    this.mapDropdownMenu.style.display = 'none'; // Hidden until 🗺️ MAPS button is clicked!
 
     this.renderMapDropdownItems();
   }
@@ -203,7 +203,7 @@ export class HUD {
           if (themeId) {
             this.themeManager.setTheme(themeId);
             this.renderMapDropdownItems();
-            this.toggleMapDropdown(false); // Auto-close menu after selecting map!
+            this.toggleMapDropdown(false); // Auto-close/drop out after picking map!
           }
         });
       });
@@ -227,56 +227,59 @@ export class HUD {
     el.style.pointerEvents = 'none';
     el.style.zIndex = '100';
 
-    // Top Main Header Bar (Left Stats & Maps, Right Volume Controls)
-    const topBar = document.createElement('div');
-    topBar.style.position = 'absolute';
-    topBar.style.top = '14px';
-    topBar.style.left = '14px';
-    topBar.style.right = '14px';
-    topBar.style.display = 'flex';
-    topBar.style.justifyContent = 'space-between';
-    topBar.style.alignItems = 'flex-start';
-
-    // Top-Left Panel (🗺️ MAPS Button + Distance & Coins Stats)
-    const topLeftContainer = document.createElement('div');
-    topLeftContainer.style.pointerEvents = 'auto';
-    topLeftContainer.style.display = 'flex';
-    topLeftContainer.style.alignItems = 'center';
-    topLeftContainer.style.gap = '8px';
-
-    // 🗺️ MAPS Toggle Button
+    // 1. TOP-LEFT CORNER: 🗺️ MAP Dropdown Button
     const mapToggleBtn = document.createElement('button');
     this.applyGlassStyle(mapToggleBtn);
+    mapToggleBtn.style.position = 'absolute';
+    mapToggleBtn.style.top = '12px';
+    mapToggleBtn.style.left = '12px';
     mapToggleBtn.style.padding = '8px 12px';
     mapToggleBtn.style.color = '#00f0ff';
     mapToggleBtn.style.fontSize = '13px';
     mapToggleBtn.style.fontWeight = '800';
     mapToggleBtn.style.cursor = 'pointer';
+    mapToggleBtn.style.pointerEvents = 'auto';
+    mapToggleBtn.style.zIndex = '180';
     mapToggleBtn.style.display = 'flex';
     mapToggleBtn.style.alignItems = 'center';
-    mapToggleBtn.style.gap = '4px';
+    mapToggleBtn.style.gap = '5px';
     mapToggleBtn.innerHTML = `🗺️ <span style="font-size: 11px;">MAPS</span>`;
-    mapToggleBtn.addEventListener('click', () => this.toggleMapDropdown());
+    mapToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleMapDropdown();
+    });
 
-    // Stats Box (Distance & Coins)
+    // 2. TOP-MIDDLE (CENTER): Coins & Distance Stats Panel
     const statsBox = document.createElement('div');
     this.applyGlassStyle(statsBox);
-    statsBox.style.padding = '6px 12px';
-    statsBox.style.color = '#ffffff';
+    statsBox.style.position = 'absolute';
+    statsBox.style.top = '12px';
+    statsBox.style.left = '50%';
+    statsBox.style.transform = 'translateX(-50%)';
+    statsBox.style.padding = '6px 16px';
+    statsBox.style.borderRadius = '20px';
+    statsBox.style.pointerEvents = 'auto';
+    statsBox.style.zIndex = '180';
+    statsBox.style.display = 'flex';
+    statsBox.style.gap = '14px';
+    statsBox.style.alignItems = 'center';
+    statsBox.style.whiteSpace = 'nowrap';
 
     statsBox.innerHTML = `
-      <div id="hud-dist" style="font-size: clamp(14px, 3.5vw, 18px); font-weight: 900; color: #00f0ff;">0 m</div>
-      <div id="hud-coins" style="font-size: clamp(12px, 3vw, 14px); font-weight: 700; color: #f59e0b; margin-top: 1px;">0 🪙</div>
+      <div id="hud-dist" style="font-size: clamp(14px, 3.5vw, 17px); font-weight: 900; color: #00f0ff;">0 m</div>
+      <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
+      <div id="hud-coins" style="font-size: clamp(13px, 3vw, 15px); font-weight: 800; color: #f59e0b;">0 🪙</div>
     `;
 
-    topLeftContainer.appendChild(mapToggleBtn);
-    topLeftContainer.appendChild(statsBox);
-
-    // Top-Right Panel (🔊 Mute & ⚙️ Volume Settings Buttons)
+    // 3. TOP-RIGHT CORNER: Audio Control Buttons (🔊 Mute & ⚙️ Settings)
     const topRightContainer = document.createElement('div');
     this.applyGlassStyle(topRightContainer);
+    topRightContainer.style.position = 'absolute';
+    topRightContainer.style.top = '12px';
+    topRightContainer.style.right = '12px';
     topRightContainer.style.padding = '6px 10px';
     topRightContainer.style.pointerEvents = 'auto';
+    topRightContainer.style.zIndex = '180';
     topRightContainer.style.display = 'flex';
     topRightContainer.style.gap = '6px';
     topRightContainer.style.alignItems = 'center';
@@ -305,18 +308,20 @@ export class HUD {
     topRightContainer.appendChild(this.muteBtn);
     topRightContainer.appendChild(settingsBtn);
 
-    topBar.appendChild(topLeftContainer);
-    topBar.appendChild(topRightContainer);
-    el.appendChild(topBar);
+    el.appendChild(mapToggleBtn);
+    el.appendChild(statsBox);
+    el.appendChild(topRightContainer);
 
     // Active Powerups Bar Container
     this.powerupsContainer = document.createElement('div');
     this.powerupsContainer.style.position = 'absolute';
-    this.powerupsContainer.style.top = '68px';
-    this.powerupsContainer.style.left = '14px';
+    this.powerupsContainer.style.top = '58px';
+    this.powerupsContainer.style.left = '50%';
+    this.powerupsContainer.style.transform = 'translateX(-50%)';
     this.powerupsContainer.style.display = 'flex';
     this.powerupsContainer.style.flexDirection = 'column';
-    this.powerupsContainer.style.gap = '5px';
+    this.powerupsContainer.style.alignItems = 'center';
+    this.powerupsContainer.style.gap = '4px';
     this.powerupsContainer.style.pointerEvents = 'none';
 
     el.appendChild(this.powerupsContainer);
@@ -370,7 +375,7 @@ export class HUD {
     el.style.left = '50%';
     el.style.transform = 'translate(-50%, -50%)';
     el.style.width = '90%';
-    el.style.maxWidth = '400px';
+    el.style.maxWidth = '380px';
     el.style.maxHeight = '80vh';
     el.style.overflowY = 'auto';
     el.style.padding = 'clamp(16px, 4vw, 28px)';
@@ -570,7 +575,7 @@ export class HUD {
 
   public showStartMenu(): void {
     this.startMenuOverlay.style.display = 'block';
-    this.inGameHUD.style.display = 'block'; // Top HUD bar (MAPS button & Audio settings) stays accessible!
+    this.inGameHUD.style.display = 'block'; // Keep top bar accessible
     this.gameOverOverlay.style.display = 'none';
   }
 
