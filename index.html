@@ -2,13 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>3D Endless Runner</title>
     <style>
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
       }
       html, body {
         width: 100%;
@@ -16,16 +21,79 @@
         overflow: hidden;
         background-color: #0a0a12;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
       }
       #app {
         width: 100%;
         height: 100%;
         position: relative;
+        overflow: hidden;
       }
       canvas {
         display: block;
         width: 100%;
         height: 100%;
+      }
+
+      /* Custom Touch Controls for Mobile & Tablet Devices */
+      .mobile-touch-controls {
+        position: absolute;
+        bottom: 24px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 24px;
+        pointer-events: none;
+        z-index: 150;
+      }
+      .touch-pad-left, .touch-pad-right {
+        display: flex;
+        gap: 12px;
+        pointer-events: auto;
+      }
+      .touch-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        color: #00f0ff;
+        font-size: 24px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        transition: transform 0.1s ease, background 0.1s ease;
+      }
+      .touch-btn:active {
+        transform: scale(0.92);
+        background: rgba(56, 189, 248, 0.3);
+      }
+
+      /* Responsive Media Adjustments */
+      @media (max-width: 600px) {
+        .touch-btn {
+          width: 50px;
+          height: 50px;
+          font-size: 20px;
+        }
+        .mobile-touch-controls {
+          bottom: 16px;
+          padding: 0 16px;
+        }
+      }
+      @media (min-width: 1025px) {
+        /* On large desktop screens, show touch controls only if touch is active */
+        .mobile-touch-controls {
+          display: none;
+        }
       }
     </style>
   </head>

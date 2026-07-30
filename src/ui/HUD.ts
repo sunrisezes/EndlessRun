@@ -1,16 +1,21 @@
 import { AudioManager } from '../audio/AudioManager';
+import { ThemeManager } from '../theme/ThemeManager';
 import { useGameStore } from '../state/GameStore';
 
 export class HUD {
   private container: HTMLElement;
   private audioManager: AudioManager;
+  private themeManager: ThemeManager;
 
   // UI Container Elements
   private startMenuOverlay: HTMLElement;
   private inGameHUD: HTMLElement;
   private gameOverOverlay: HTMLElement;
+  private audioSettingsModal!: HTMLElement;
+  private themeSelectorPanel!: HTMLElement;
+  private touchControlsContainer!: HTMLElement;
 
-  // Element References (Definite Assignment Assertions)
+  // Element References
   private distanceText!: HTMLElement;
   private coinsText!: HTMLElement;
   private powerupsContainer!: HTMLElement;
@@ -22,27 +27,41 @@ export class HUD {
   // Callbacks
   public onStartGame?: () => void;
   public onRestartGame?: () => void;
+  public onAction?: (action: 'LEFT' | 'RIGHT' | 'JUMP' | 'SLIDE') => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
     this.audioManager = AudioManager.getInstance();
+    this.themeManager = ThemeManager.getInstance();
 
     this.startMenuOverlay = this.createStartMenu();
     this.inGameHUD = this.createInGameHUD();
     this.gameOverOverlay = this.createGameOverOverlay();
+    this.createAudioSettingsModal();
+    this.createThemeSelectorPanel();
 
     this.container.appendChild(this.startMenuOverlay);
     this.container.appendChild(this.inGameHUD);
     this.container.appendChild(this.gameOverOverlay);
+    this.container.appendChild(this.audioSettingsModal);
+    this.container.appendChild(this.themeSelectorPanel);
 
-    // Initial State: Show Start Menu, Hide HUD & Game Over
+    // Initial State: Show Start Menu & Theme Selector
     this.showStartMenu();
 
     // Listen to Keyboard shortcuts (Space/Enter for start, R for restart)
     window.addEventListener('keydown', (e) => {
-      if ((e.code === 'Space' || e.code === 'Enter') && this.startMenuOverlay.style.display !== 'none') {
+      if (
+        (e.code === 'Space' || e.code === 'Enter') &&
+        this.startMenuOverlay.style.display !== 'none' &&
+        this.audioSettingsModal.style.display === 'none'
+      ) {
         this.handleStartClick();
-      } else if (e.code === 'KeyR' && this.gameOverOverlay.style.display !== 'none') {
+      } else if (
+        e.code === 'KeyR' &&
+        this.gameOverOverlay.style.display !== 'none' &&
+        this.audioSettingsModal.style.display === 'none'
+      ) {
         this.handleRestartClick();
       }
     });
@@ -55,81 +74,190 @@ export class HUD {
     el.style.top = '50%';
     el.style.left = '50%';
     el.style.transform = 'translate(-50%, -50%)';
-    el.style.width = '90%';
-    el.style.maxWidth = '480px';
-    el.style.padding = '32px';
+    el.style.width = '92%';
+    el.style.maxWidth = '460px';
+    el.style.maxHeight = '85vh';
+    el.style.overflowY = 'auto';
+    el.style.padding = 'clamp(16px, 4vw, 32px)';
     el.style.textAlign = 'center';
     el.style.color = '#ffffff';
 
     el.innerHTML = `
-      <div style="font-size: 32px; font-weight: 900; letter-spacing: 2px; color: #00f0ff; text-shadow: 0 0 16px rgba(0,240,255,0.6); margin-bottom: 8px;">
+      <div style="font-size: clamp(22px, 6vw, 32px); font-weight: 900; letter-spacing: 2px; color: #00f0ff; text-shadow: 0 0 16px rgba(0,240,255,0.6); margin-bottom: 8px;">
         CYBER RUNNER 3D
       </div>
-      <div style="font-size: 14px; color: #94a3b8; margin-bottom: 24px;">High-Speed Procedural PBR Runner</div>
+      <div style="font-size: clamp(12px, 3.5vw, 14px); color: #94a3b8; margin-bottom: 20px;">High-Speed Procedural PBR Runner</div>
 
-      <div style="background: rgba(2, 6, 23, 0.6); padding: 16px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 24px; text-align: left; font-size: 13px; line-height: 1.6;">
+      <div style="background: rgba(2, 6, 23, 0.6); padding: clamp(12px, 3vw, 16px); border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 20px; text-align: left; font-size: clamp(11px, 3vw, 13px); line-height: 1.6;">
         <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">CONTROLS:</div>
         <div>🎮 <b>A / D</b> or <b>Left / Right</b> : Switch Lane</div>
         <div>🚀 <b>W / Up / Space</b> : Jump</div>
         <div>🛡️ <b>S / Down</b> : Slide</div>
-        <div>📱 <b>Swipe Left / Right / Up / Down</b> for Mobile</div>
+        <div>🗺️ <b>Select Moving Video Themes</b> on the Left Panel</div>
       </div>
 
-      <button id="start-btn" style="
-        width: 100%;
-        padding: 16px;
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: 1px;
-        color: #0f172a;
-        background: linear-gradient(135deg, #00f0ff 0%, #38bdf8 100%);
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-      ">
-        PRESS SPACE / TAP TO RUN
-      </button>
+      <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+        <button id="start-btn" style="
+          flex: 1;
+          padding: clamp(12px, 3vw, 16px);
+          font-size: clamp(15px, 4vw, 18px);
+          font-weight: 800;
+          letter-spacing: 1px;
+          color: #0f172a;
+          background: linear-gradient(135deg, #00f0ff 0%, #38bdf8 100%);
+          border: none;
+          border-radius: 10px;
+          cursor: pointer;
+          box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+          transition: transform 0.15s ease;
+        ">
+          START RUN
+        </button>
+
+        <button id="start-audio-btn" style="
+          padding: clamp(12px, 3vw, 16px);
+          font-size: 18px;
+          background: rgba(30, 41, 59, 0.8);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.4);
+          border-radius: 10px;
+          cursor: pointer;
+        " title="Audio Settings">
+          ⚙️
+        </button>
+      </div>
     `;
 
     setTimeout(() => {
       const btn = el.querySelector('#start-btn');
       btn?.addEventListener('click', () => this.handleStartClick());
+
+      const audioBtn = el.querySelector('#start-audio-btn');
+      audioBtn?.addEventListener('click', () => this.openAudioSettings());
     }, 0);
 
     return el;
+  }
+
+  // --- Left-Side Theme Selector Sidebar Section ---
+
+  private createThemeSelectorPanel(): void {
+    this.themeSelectorPanel = document.createElement('div');
+    this.themeSelectorPanel.className = 'theme-selector-panel';
+    this.applyGlassStyle(this.themeSelectorPanel);
+    this.themeSelectorPanel.style.position = 'absolute';
+    this.themeSelectorPanel.style.top = '16px';
+    this.themeSelectorPanel.style.left = '16px';
+    this.themeSelectorPanel.style.width = '200px';
+    this.themeSelectorPanel.style.maxHeight = 'calc(100vh - 32px)';
+    this.themeSelectorPanel.style.overflowY = 'auto';
+    this.themeSelectorPanel.style.padding = '12px';
+    this.themeSelectorPanel.style.zIndex = '140';
+    this.themeSelectorPanel.style.color = '#ffffff';
+
+    this.renderThemeCards();
+  }
+
+  private renderThemeCards(): void {
+    const activeThemeId = this.themeManager.currentTheme.id;
+
+    let html = `
+      <div style="font-size: 13px; font-weight: 800; color: #00f0ff; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+        <span>🗺️ SELECT MAP</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+    `;
+
+    ThemeManager.THEMES.forEach((theme) => {
+      const isActive = theme.id === activeThemeId;
+      const activeBorder = isActive
+        ? 'border: 2px solid #00f0ff; background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 12px rgba(0,240,255,0.4);'
+        : 'border: 1px solid rgba(255,255,255,0.15); background: rgba(2, 6, 23, 0.6);';
+
+      html += `
+        <button class="theme-card-btn" data-theme="${theme.id}" style="
+          padding: 8px 10px;
+          border-radius: 8px;
+          ${activeBorder}
+          color: #ffffff;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <span style="font-size: 18px;">${theme.icon}</span>
+          <div style="overflow: hidden;">
+            <div style="font-size: 12px; font-weight: 800; color: ${isActive ? '#00f0ff' : '#e2e8f0'}; text-overflow: ellipsis; white-space: nowrap;">
+              ${theme.name}
+            </div>
+            <div style="font-size: 10px; color: #94a3b8; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+              ${theme.description}
+            </div>
+          </div>
+        </button>
+      `;
+    });
+
+    html += `</div>`;
+    this.themeSelectorPanel.innerHTML = html;
+
+    // Attach click listeners to theme cards
+    setTimeout(() => {
+      const cardBtns = this.themeSelectorPanel.querySelectorAll('.theme-card-btn');
+      cardBtns.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const themeId = (e.currentTarget as HTMLElement).getAttribute('data-theme');
+          if (themeId) {
+            this.themeManager.setTheme(themeId);
+            this.renderThemeCards(); // re-render to update active border highlight
+          }
+        });
+      });
+    }, 0);
   }
 
   private createInGameHUD(): HTMLElement {
     const el = document.createElement('div');
     el.className = 'hud-ingame';
     el.style.position = 'absolute';
-    el.style.top = '16px';
-    el.style.left = '16px';
-    el.style.right = '16px';
-    el.style.display = 'flex';
-    el.style.justifyContent = 'space-between';
-    el.style.alignItems = 'flex-start';
+    el.style.top = '0';
+    el.style.left = '0';
+    el.style.right = '0';
+    el.style.bottom = '0';
     el.style.pointerEvents = 'none';
     el.style.zIndex = '100';
+
+    // Top Header Bar
+    const topBar = document.createElement('div');
+    topBar.style.position = 'absolute';
+    topBar.style.top = '16px';
+    topBar.style.left = '230px'; // Offset to sit next to left theme sidebar
+    topBar.style.right = '16px';
+    topBar.style.display = 'flex';
+    topBar.style.justifyContent = 'space-between';
+    topBar.style.alignItems = 'flex-start';
 
     // Left Stats Panel
     const leftPanel = document.createElement('div');
     this.applyGlassStyle(leftPanel);
-    leftPanel.style.padding = '12px 20px';
+    leftPanel.style.padding = '10px 16px';
     leftPanel.style.color = '#ffffff';
 
     leftPanel.innerHTML = `
-      <div id="hud-dist" style="font-size: 20px; font-weight: 900; color: #00f0ff;">0 m</div>
-      <div id="hud-coins" style="font-size: 15px; font-weight: 700; color: #f59e0b; margin-top: 4px;">0 🪙</div>
+      <div id="hud-dist" style="font-size: clamp(16px, 4vw, 20px); font-weight: 900; color: #00f0ff;">0 m</div>
+      <div id="hud-coins" style="font-size: clamp(13px, 3vw, 15px); font-weight: 700; color: #f59e0b; margin-top: 2px;">0 🪙</div>
     `;
 
     // Right Controls / Audio Panel
     const rightPanel = document.createElement('div');
     this.applyGlassStyle(rightPanel);
-    rightPanel.style.padding = '8px 12px';
+    rightPanel.style.padding = '6px 10px';
     rightPanel.style.pointerEvents = 'auto';
+    rightPanel.style.display = 'flex';
+    rightPanel.style.gap = '6px';
+    rightPanel.style.alignItems = 'center';
 
     this.muteBtn = document.createElement('button');
     this.muteBtn.style.background = 'transparent';
@@ -137,25 +265,73 @@ export class HUD {
     this.muteBtn.style.fontSize = '20px';
     this.muteBtn.style.cursor = 'pointer';
     this.muteBtn.innerText = '🔊';
+    this.muteBtn.title = 'Toggle Mute';
     this.muteBtn.addEventListener('click', () => {
       const muted = this.audioManager.toggleMute();
       this.muteBtn.innerText = muted ? '🔇' : '🔊';
     });
+
+    const settingsBtn = document.createElement('button');
+    settingsBtn.style.background = 'transparent';
+    settingsBtn.style.border = 'none';
+    settingsBtn.style.fontSize = '20px';
+    settingsBtn.style.cursor = 'pointer';
+    settingsBtn.innerText = '⚙️';
+    settingsBtn.title = 'Volume & Audio Settings';
+    settingsBtn.addEventListener('click', () => this.openAudioSettings());
+
     rightPanel.appendChild(this.muteBtn);
+    rightPanel.appendChild(settingsBtn);
 
     // Active Powerups Bar Container
     this.powerupsContainer = document.createElement('div');
     this.powerupsContainer.style.position = 'absolute';
-    this.powerupsContainer.style.top = '72px';
+    this.powerupsContainer.style.top = '64px';
     this.powerupsContainer.style.left = '0px';
     this.powerupsContainer.style.display = 'flex';
     this.powerupsContainer.style.flexDirection = 'column';
-    this.powerupsContainer.style.gap = '8px';
+    this.powerupsContainer.style.gap = '6px';
 
     leftPanel.appendChild(this.powerupsContainer);
 
-    el.appendChild(leftPanel);
-    el.appendChild(rightPanel);
+    topBar.appendChild(leftPanel);
+    topBar.appendChild(rightPanel);
+    el.appendChild(topBar);
+
+    // Mobile & Tablet Touch Control Pad Overlay
+    this.touchControlsContainer = document.createElement('div');
+    this.touchControlsContainer.className = 'mobile-touch-controls';
+
+    this.touchControlsContainer.innerHTML = `
+      <div class="touch-pad-left">
+        <button class="touch-btn" id="btn-left">◀</button>
+        <button class="touch-btn" id="btn-right">▶</button>
+      </div>
+      <div class="touch-pad-right">
+        <button class="touch-btn" id="btn-slide">▼</button>
+        <button class="touch-btn" id="btn-jump">▲</button>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const btnLeft = this.touchControlsContainer.querySelector('#btn-left');
+      const btnRight = this.touchControlsContainer.querySelector('#btn-right');
+      const btnJump = this.touchControlsContainer.querySelector('#btn-jump');
+      const btnSlide = this.touchControlsContainer.querySelector('#btn-slide');
+
+      const triggerAction = (action: 'LEFT' | 'RIGHT' | 'JUMP' | 'SLIDE', e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.onAction) this.onAction(action);
+      };
+
+      btnLeft?.addEventListener('pointerdown', (e) => triggerAction('LEFT', e));
+      btnRight?.addEventListener('pointerdown', (e) => triggerAction('RIGHT', e));
+      btnJump?.addEventListener('pointerdown', (e) => triggerAction('JUMP', e));
+      btnSlide?.addEventListener('pointerdown', (e) => triggerAction('SLIDE', e));
+    }, 0);
+
+    el.appendChild(this.touchControlsContainer);
 
     this.distanceText = leftPanel.querySelector('#hud-dist')!;
     this.coinsText = leftPanel.querySelector('#hud-coins')!;
@@ -170,48 +346,67 @@ export class HUD {
     el.style.top = '50%';
     el.style.left = '50%';
     el.style.transform = 'translate(-50%, -50%)';
-    el.style.width = '90%';
+    el.style.width = '92%';
     el.style.maxWidth = '420px';
-    el.style.padding = '32px';
+    el.style.maxHeight = '85vh';
+    el.style.overflowY = 'auto';
+    el.style.padding = 'clamp(16px, 4vw, 32px)';
     el.style.textAlign = 'center';
     el.style.color = '#ffffff';
 
     el.innerHTML = `
-      <div style="font-size: 28px; font-weight: 900; color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.6); margin-bottom: 16px;">
+      <div style="font-size: clamp(22px, 6vw, 28px); font-weight: 900; color: #ef4444; text-shadow: 0 0 12px rgba(239,68,68,0.6); margin-bottom: 16px;">
         GAME OVER
       </div>
 
-      <div style="background: rgba(2, 6, 23, 0.6); padding: 16px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3); margin-bottom: 24px; text-align: left;">
-        <div style="font-size: 14px; color: #94a3b8;">FINAL DISTANCE:</div>
-        <div id="go-final-score" style="font-size: 24px; font-weight: 900; color: #00f0ff; margin-bottom: 12px;">0 m</div>
+      <div style="background: rgba(2, 6, 23, 0.6); padding: clamp(12px, 3vw, 16px); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3); margin-bottom: 20px; text-align: left;">
+        <div style="font-size: 13px; color: #94a3b8;">FINAL DISTANCE:</div>
+        <div id="go-final-score" style="font-size: clamp(20px, 5vw, 24px); font-weight: 900; color: #00f0ff; margin-bottom: 10px;">0 m</div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 14px; color: #cbd5e1;">
+        <div style="display: flex; justify-content: space-between; font-size: clamp(12px, 3.2vw, 14px); color: #cbd5e1;">
           <div>HIGH SCORE: <b id="go-high-score" style="color: #f59e0b;">0 m</b></div>
           <div>COINS: <b id="go-coins" style="color: #eab308;">0 🪙</b></div>
         </div>
       </div>
 
-      <button id="restart-btn" style="
-        width: 100%;
-        padding: 16px;
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: 1px;
-        color: #ffffff;
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
-        transition: transform 0.15s ease;
-      ">
-        PLAY AGAIN [R]
-      </button>
+      <div style="display: flex; gap: 12px;">
+        <button id="restart-btn" style="
+          flex: 1;
+          padding: clamp(12px, 3vw, 16px);
+          font-size: clamp(15px, 4vw, 18px);
+          font-weight: 800;
+          letter-spacing: 1px;
+          color: #ffffff;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          border: none;
+          border-radius: 10px;
+          cursor: pointer;
+          box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+          transition: transform 0.15s ease;
+        ">
+          PLAY AGAIN
+        </button>
+
+        <button id="go-audio-btn" style="
+          padding: clamp(12px, 3vw, 16px);
+          font-size: 18px;
+          background: rgba(30, 41, 59, 0.8);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.4);
+          border-radius: 10px;
+          cursor: pointer;
+        " title="Audio Settings">
+          ⚙️
+        </button>
+      </div>
     `;
 
     setTimeout(() => {
       const btn = el.querySelector('#restart-btn');
       btn?.addEventListener('click', () => this.handleRestartClick());
+
+      const audioBtn = el.querySelector('#go-audio-btn');
+      audioBtn?.addEventListener('click', () => this.openAudioSettings());
     }, 0);
 
     this.finalScoreText = el.querySelector('#go-final-score')!;
@@ -221,32 +416,151 @@ export class HUD {
     return el;
   }
 
+  // --- Audio & Volume Settings Modal ---
+
+  private createAudioSettingsModal(): void {
+    this.audioSettingsModal = document.createElement('div');
+    this.applyGlassStyle(this.audioSettingsModal);
+    this.audioSettingsModal.style.top = '50%';
+    this.audioSettingsModal.style.left = '50%';
+    this.audioSettingsModal.style.transform = 'translate(-50%, -50%)';
+    this.audioSettingsModal.style.width = '92%';
+    this.audioSettingsModal.style.maxWidth = '400px';
+    this.audioSettingsModal.style.maxHeight = '85vh';
+    this.audioSettingsModal.style.overflowY = 'auto';
+    this.audioSettingsModal.style.padding = 'clamp(16px, 4vw, 24px)';
+    this.audioSettingsModal.style.color = '#ffffff';
+    this.audioSettingsModal.style.display = 'none';
+    this.audioSettingsModal.style.zIndex = '200';
+
+    const masterVal = Math.round(this.audioManager.getMasterVolume() * 100);
+    const bgmVal = Math.round(this.audioManager.getBgmVolume() * 100);
+    const sfxVal = Math.round(this.audioManager.getSfxVolume() * 100);
+
+    this.audioSettingsModal.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="font-size: clamp(16px, 4.5vw, 20px); font-weight: 800; color: #00f0ff;">🔊 AUDIO SETTINGS</div>
+        <button id="close-audio-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✖</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: clamp(12px, 3.2vw, 14px);">
+        <!-- Master Volume -->
+        <div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>🎚️ Master Volume</span>
+            <span id="master-vol-txt">${masterVal}%</span>
+          </div>
+          <input type="range" id="master-vol-slider" min="0" max="100" value="${masterVal}" style="width: 100%; accent-color: #00f0ff; cursor: pointer; height: 8px;" />
+        </div>
+
+        <!-- Music Volume -->
+        <div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>🎵 Music (BGM)</span>
+            <span id="bgm-vol-txt">${bgmVal}%</span>
+          </div>
+          <input type="range" id="bgm-vol-slider" min="0" max="100" value="${bgmVal}" style="width: 100%; accent-color: #38bdf8; cursor: pointer; height: 8px;" />
+        </div>
+
+        <!-- SFX Volume -->
+        <div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>🔔 Sound Effects (SFX)</span>
+            <span id="sfx-vol-txt">${sfxVal}%</span>
+          </div>
+          <input type="range" id="sfx-vol-slider" min="0" max="100" value="${sfxVal}" style="width: 100%; accent-color: #f59e0b; cursor: pointer; height: 8px;" />
+        </div>
+
+        <!-- Mute Toggle -->
+        <button id="modal-mute-btn" style="
+          margin-top: 6px;
+          padding: 10px;
+          background: rgba(30, 41, 59, 0.8);
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          border-radius: 8px;
+          color: #ffffff;
+          font-weight: 700;
+          cursor: pointer;
+        ">
+          ${this.audioManager.getIsMuted() ? '🔇 Unmute All' : '🔊 Mute All'}
+        </button>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const closeBtn = this.audioSettingsModal.querySelector('#close-audio-modal');
+      closeBtn?.addEventListener('click', () => this.closeAudioSettings());
+
+      const masterSlider = this.audioSettingsModal.querySelector('#master-vol-slider') as HTMLInputElement;
+      const masterTxt = this.audioSettingsModal.querySelector('#master-vol-txt') as HTMLElement;
+      masterSlider?.addEventListener('input', (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        masterTxt.innerText = `${val}%`;
+        this.audioManager.setMasterVolume(val / 100);
+      });
+
+      const bgmSlider = this.audioSettingsModal.querySelector('#bgm-vol-slider') as HTMLInputElement;
+      const bgmTxt = this.audioSettingsModal.querySelector('#bgm-vol-txt') as HTMLElement;
+      bgmSlider?.addEventListener('input', (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        bgmTxt.innerText = `${val}%`;
+        this.audioManager.setBgmVolume(val / 100);
+      });
+
+      const sfxSlider = this.audioSettingsModal.querySelector('#sfx-vol-slider') as HTMLInputElement;
+      const sfxTxt = this.audioSettingsModal.querySelector('#sfx-vol-txt') as HTMLElement;
+      sfxSlider?.addEventListener('input', (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        sfxTxt.innerText = `${val}%`;
+        this.audioManager.setSfxVolume(val / 100);
+      });
+
+      const modalMuteBtn = this.audioSettingsModal.querySelector('#modal-mute-btn') as HTMLElement;
+      modalMuteBtn?.addEventListener('click', () => {
+        const muted = this.audioManager.toggleMute();
+        modalMuteBtn.innerText = muted ? '🔇 Unmute All' : '🔊 Mute All';
+        if (this.muteBtn) this.muteBtn.innerText = muted ? '🔇' : '🔊';
+      });
+    }, 0);
+  }
+
+  public openAudioSettings(): void {
+    this.audioSettingsModal.style.display = 'block';
+  }
+
+  public closeAudioSettings(): void {
+    this.audioSettingsModal.style.display = 'none';
+  }
+
   private applyGlassStyle(el: HTMLElement): void {
     el.style.position = 'absolute';
-    el.style.background = 'rgba(15, 23, 42, 0.8)';
-    el.style.backdropFilter = 'blur(12px)';
-    (el.style as unknown as Record<string, string>).webkitBackdropFilter = 'blur(12px)';
+    el.style.background = 'rgba(15, 23, 42, 0.85)';
+    el.style.backdropFilter = 'blur(16px)';
+    (el.style as unknown as Record<string, string>).webkitBackdropFilter = 'blur(16px)';
     el.style.border = '1px solid rgba(56, 189, 248, 0.3)';
     el.style.borderRadius = '16px';
-    el.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.5)';
+    el.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.6)';
     el.style.zIndex = '100';
   }
 
   private handleStartClick(): void {
     this.startMenuOverlay.style.display = 'none';
-    this.inGameHUD.style.display = 'flex';
+    this.inGameHUD.style.display = 'block';
     this.gameOverOverlay.style.display = 'none';
+    this.closeAudioSettings();
     if (this.onStartGame) this.onStartGame();
   }
 
   private handleRestartClick(): void {
     this.gameOverOverlay.style.display = 'none';
-    this.inGameHUD.style.display = 'flex';
+    this.inGameHUD.style.display = 'block';
+    this.closeAudioSettings();
     if (this.onRestartGame) this.onRestartGame();
   }
 
   public showStartMenu(): void {
     this.startMenuOverlay.style.display = 'block';
+    this.themeSelectorPanel.style.display = 'block';
     this.inGameHUD.style.display = 'none';
     this.gameOverOverlay.style.display = 'none';
   }
@@ -263,30 +577,42 @@ export class HUD {
     this.coinsEarnedText.innerText = `${coins} 🪙`;
 
     this.inGameHUD.style.display = 'none';
+    this.themeSelectorPanel.style.display = 'block';
     this.gameOverOverlay.style.display = 'block';
   }
 
-  public updateHUD(distance: number, coins: number, multiplier: number, powerups: {
-    magnetTimer: number;
-    shieldActive: boolean;
-    boostTimer: number;
-    multiplierTimer: number;
-  }): void {
+  public updateHUD(
+    distance: number,
+    coins: number,
+    multiplier: number,
+    powerups: {
+      magnetTimer: number;
+      shieldTimer: number;
+      boostTimer: number;
+      flyTimer: number;
+      multiplierTimer: number;
+    }
+  ): void {
     const displayDistance = distance * multiplier;
-    this.distanceText.innerHTML = `${displayDistance} m ${multiplier > 1 ? '<span style="color:#a855f7; font-size:14px;">[2X]</span>' : ''}`;
+    this.distanceText.innerHTML = `${displayDistance} m ${
+      multiplier > 1 ? '<span style="color:#a855f7; font-size:12px;">[2X]</span>' : ''
+    }`;
     this.coinsText.innerText = `${coins} 🪙`;
 
     // Render Active Power-Up Progress Badges
     this.powerupsContainer.innerHTML = '';
 
     if (powerups.magnetTimer > 0) {
-      this.addPowerUpBadge('🧲 MAGNET', powerups.magnetTimer / 8.0, '#3b82f6');
+      this.addPowerUpBadge('🧲 MAGNET', powerups.magnetTimer / 10.0, '#3b82f6');
     }
-    if (powerups.shieldActive) {
-      this.addPowerUpBadge('🛡️ SHIELD', 1.0, '#06b6d4');
+    if (powerups.shieldTimer > 0) {
+      this.addPowerUpBadge('🛡️ SHIELD', powerups.shieldTimer / 10.0, '#06b6d4');
     }
     if (powerups.boostTimer > 0) {
-      this.addPowerUpBadge('⚡ BOOST', powerups.boostTimer / 5.0, '#eab308');
+      this.addPowerUpBadge('⚡ 5X BOOST', powerups.boostTimer / 10.0, '#eab308');
+    }
+    if (powerups.flyTimer > 0) {
+      this.addPowerUpBadge('🚀 FLYING', powerups.flyTimer / 10.0, '#10b981');
     }
     if (powerups.multiplierTimer > 0) {
       this.addPowerUpBadge('✖️ 2X MULTIPLIER', powerups.multiplierTimer / 10.0, '#a855f7');
@@ -298,17 +624,17 @@ export class HUD {
     badge.style.background = 'rgba(2, 6, 23, 0.7)';
     badge.style.border = `1px solid ${color}`;
     badge.style.borderRadius = '6px';
-    badge.style.padding = '4px 8px';
-    badge.style.fontSize = '12px';
+    badge.style.padding = '3px 6px';
+    badge.style.fontSize = '11px';
     badge.style.fontWeight = 'bold';
     badge.style.color = color;
-    badge.style.width = '140px';
+    badge.style.width = '130px';
     badge.style.overflow = 'hidden';
 
     const bar = document.createElement('div');
     bar.style.height = '3px';
     bar.style.background = color;
-    bar.style.marginTop = '4px';
+    bar.style.marginTop = '3px';
     bar.style.borderRadius = '2px';
     bar.style.width = `${Math.min(100, progressRatio * 100)}%`;
     bar.style.transition = 'width 0.1s linear';

@@ -23,7 +23,7 @@ export class InputManager {
     }
   }
 
-  private trigger(action: InputAction): void {
+  public trigger(action: InputAction): void {
     const actionListeners = this.listeners.get(action);
     if (actionListeners) {
       for (const callback of actionListeners) {

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TextureGenerator } from '../utils/TextureGenerator';
 import { ObstaclePool } from './ObstaclePool';
+import { PowerUpManager } from './PowerUpManager';
 
 export interface TrackChunk {
   group: THREE.Group;
@@ -10,20 +11,22 @@ export interface TrackChunk {
 export class TrackManager {
   public scene: THREE.Scene;
   public obstaclePool: ObstaclePool;
+  public powerUpManager: PowerUpManager;
 
   public static readonly CHUNK_LENGTH = 30.0;
-  public static readonly NUM_CHUNKS = 10;
+  public static readonly NUM_CHUNKS = 14;
   public static readonly TRACK_WIDTH = 12.0;
+  private static readonly RECYCLE_MARGIN = 40.0;
 
   private chunks: TrackChunk[] = [];
   private asphaltMaterial: THREE.MeshStandardMaterial;
-  private curbMaterial: THREE.MeshStandardMaterial;
+  public curbMaterial: THREE.MeshStandardMaterial;
 
-  constructor(scene: THREE.Scene, obstaclePool: ObstaclePool) {
+  constructor(scene: THREE.Scene, obstaclePool: ObstaclePool, powerUpManager: PowerUpManager) {
     this.scene = scene;
     this.obstaclePool = obstaclePool;
+    this.powerUpManager = powerUpManager;
 
-    // Create Asphalt PBR Material
     const asphaltTextures = TextureGenerator.createAsphaltTextures();
     asphaltTextures.map.repeat.set(1, 4);
     asphaltTextures.normalMap.repeat.set(1, 4);
@@ -61,8 +64,11 @@ export class TrackManager {
         startZ: chunkZ,
       });
 
-      // Keep initial 2 chunks clean for safe player spawn, populate obstacles on remaining
-      if (i >= 2) {
+      // Spawn coins on all chunks (including Chunk 0 so player sees coins at spawn)
+      this.powerUpManager.spawnCollectiblesForChunk(chunkZ);
+
+      // Keep Chunk 0 clear of obstacles for safe player start, populate obstacles from Chunk 1
+      if (i >= 1) {
         this.obstaclePool.spawnObstaclesForChunk(chunkZ);
       }
     }
@@ -100,25 +106,27 @@ export class TrackManager {
 
   /**
    * Updates track chunk positions relative to player Z position.
-   * Recycles chunks that fall behind player seamlessly to the front.
+   * Recycles chunks ONLY when they are far behind camera field of view (40u margin).
    */
   public update(playerZ: number): void {
     const oldestChunk = this.chunks[0];
 
-    // Check if player has passed the oldest chunk
-    if (playerZ < oldestChunk.startZ - TrackManager.CHUNK_LENGTH) {
+    // Check if player has moved at least 40u past the oldest chunk end before recycling
+    if (playerZ < oldestChunk.startZ - TrackManager.CHUNK_LENGTH - TrackManager.RECYCLE_MARGIN) {
       const furthestChunk = this.chunks[this.chunks.length - 1];
       const newStartZ = furthestChunk.startZ - TrackManager.CHUNK_LENGTH;
 
-      // 1. Clear obstacles from recycled chunk
+      // 1. Clear obstacles & coins from recycled chunk
       this.obstaclePool.recycleChunkObstacles(oldestChunk.startZ);
+      this.powerUpManager.recycleChunkCollectibles(oldestChunk.startZ);
 
       // 2. Reposition chunk mesh to front
       oldestChunk.startZ = newStartZ;
       oldestChunk.group.position.z = newStartZ;
 
-      // 3. Spawn new obstacles on newly recycled chunk
+      // 3. Spawn new obstacles & coins on newly recycled chunk
       this.obstaclePool.spawnObstaclesForChunk(newStartZ);
+      this.powerUpManager.spawnCollectiblesForChunk(newStartZ);
 
       // 4. Move oldest chunk to end of array
       this.chunks.shift();
@@ -128,13 +136,17 @@ export class TrackManager {
 
   public reset(): void {
     this.obstaclePool.clearAll();
+    this.powerUpManager.reset();
 
     for (let i = 0; i < TrackManager.NUM_CHUNKS; i++) {
       const chunkZ = -i * TrackManager.CHUNK_LENGTH;
       this.chunks[i].startZ = chunkZ;
       this.chunks[i].group.position.z = chunkZ;
 
-      if (i >= 2) {
+      // Spawn coins on all chunks
+      this.powerUpManager.spawnCollectiblesForChunk(chunkZ);
+
+      if (i >= 1) {
         this.obstaclePool.spawnObstaclesForChunk(chunkZ);
       }
     }

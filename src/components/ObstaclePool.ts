@@ -169,69 +169,69 @@ export class ObstaclePool {
   }
 
   private buildHighBeamMesh(group: THREE.Group): void {
-    // Overhead Heavy Beam (Must Slide Under: Bottom clearance ~1.3u, Top ~2.8u)
-    const beamGeo = new THREE.BoxGeometry(3.2, 1.4, 0.6);
+    // Overhead Heavy Beam (Must Slide Under: Bottom clearance ~1.4u, Top ~3.2u, Pillar Height ~4.8u)
+    const beamGeo = new THREE.BoxGeometry(3.4, 1.8, 0.8);
     const beam = new THREE.Mesh(beamGeo, this.hazardMaterial);
-    beam.position.set(0, 2.0, 0);
+    beam.position.set(0, 2.3, 0);
     beam.castShadow = true;
     group.add(beam);
 
-    // Side Pillars
-    const pillarGeo = new THREE.BoxGeometry(0.4, 2.8, 0.6);
+    // Side Pillars (Height ~4.8u)
+    const pillarGeo = new THREE.BoxGeometry(0.5, 4.8, 0.8);
     const pillarL = new THREE.Mesh(pillarGeo, this.metalMaterial);
-    pillarL.position.set(-1.5, 1.4, 0);
+    pillarL.position.set(-1.5, 2.4, 0);
     pillarL.castShadow = true;
     group.add(pillarL);
 
     const pillarR = new THREE.Mesh(pillarGeo, this.metalMaterial);
-    pillarR.position.set(1.5, 1.4, 0);
+    pillarR.position.set(1.5, 2.4, 0);
     pillarR.castShadow = true;
     group.add(pillarR);
 
     // Dual Warning Lights
-    const lightGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const lightGeo = new THREE.SphereGeometry(0.18, 8, 8);
     const lightL = new THREE.Mesh(lightGeo, this.warningLightMat);
-    lightL.position.set(-1.0, 2.8, 0);
+    lightL.position.set(-1.0, 4.9, 0);
     group.add(lightL);
 
     const lightR = new THREE.Mesh(lightGeo, this.warningLightMat);
-    lightR.position.set(1.0, 2.8, 0);
+    lightR.position.set(1.0, 4.9, 0);
     group.add(lightR);
   }
 
   private buildSolidBlockadeMesh(group: THREE.Group): void {
-    // Solid Concrete Barrier (Spans 1 Lane, Height ~3.2u)
-    const blockGeo = new THREE.BoxGeometry(3.0, 3.2, 1.2);
+    // Solid Barrier (Spans 1 Lane, Height ~2.6u)
+    const blockGeo = new THREE.BoxGeometry(3.2, 2.6, 1.2);
     const block = new THREE.Mesh(blockGeo, this.hazardMaterial);
-    block.position.set(0, 1.6, 0);
+    block.position.set(0, 1.3, 0);
     block.castShadow = true;
     block.receiveShadow = true;
     group.add(block);
 
     // Warning Light Top
-    const lightGeo = new THREE.BoxGeometry(0.4, 0.3, 0.4);
+    const lightGeo = new THREE.BoxGeometry(0.5, 0.3, 0.5);
     const light = new THREE.Mesh(lightGeo, this.warningLightMat);
-    light.position.set(0, 3.35, 0);
+    light.position.set(0, 2.75, 0);
     group.add(light);
   }
 
   private buildDoubleTrapMesh(group: THREE.Group): void {
-    // Spans 2 Lanes (Width ~6.8u, Height ~3.2u)
-    const trapGeo = new THREE.BoxGeometry(6.8, 3.2, 1.2);
+    // Spans 2 Lanes (Width ~6.8u, Height ~2.6u)
+    const trapGeo = new THREE.BoxGeometry(6.8, 2.6, 1.2);
     const trap = new THREE.Mesh(trapGeo, this.hazardMaterial);
-    trap.position.set(0, 1.6, 0);
+    trap.position.set(0, 1.3, 0);
     trap.castShadow = true;
     trap.receiveShadow = true;
     group.add(trap);
 
     // Dual Warning Lights
-    const lightGeo = new THREE.BoxGeometry(0.4, 0.3, 0.4);
+    const lightGeo = new THREE.BoxGeometry(0.5, 0.3, 0.5);
     const light1 = new THREE.Mesh(lightGeo, this.warningLightMat);
-    light1.position.set(-2.0, 3.35, 0);
+    light1.position.set(-2.0, 2.75, 0);
     group.add(light1);
 
     const light2 = new THREE.Mesh(lightGeo, this.warningLightMat);
-    light2.position.set(2.0, 3.35, 0);
+    light2.position.set(2.0, 2.75, 0);
     group.add(light2);
   }
 

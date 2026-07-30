@@ -3,7 +3,7 @@ import { LANES, Character } from './Character';
 import { ParticleSystem } from './ParticleSystem';
 import { AudioManager } from '../audio/AudioManager';
 
-export type PowerUpType = 'MAGNET' | 'SHIELD' | 'BOOST' | 'MULTIPLIER';
+export type PowerUpType = 'MAGNET' | 'SHIELD' | 'BOOST' | 'MULTIPLIER' | 'FLY';
 
 export interface Coin {
   id: string;
@@ -34,13 +34,18 @@ export class PowerUpManager {
   private coinGeo: THREE.CylinderGeometry;
   private coinMat: THREE.MeshStandardMaterial;
 
-  // Active Power-Up Timers & States
+  // Active Power-Up 10-Second Timers
   public magnetTimer: number = 0;
-  public shieldActive: boolean = false;
+  public shieldTimer: number = 0;
   public boostTimer: number = 0;
+  public flyTimer: number = 0;
   public multiplierTimer: number = 0;
 
   public coinsCollectedCount: number = 0;
+
+  public get shieldActive(): boolean {
+    return this.shieldTimer > 0;
+  }
 
   constructor(scene: THREE.Scene, particleSystem: ParticleSystem) {
     this.scene = scene;
@@ -50,51 +55,57 @@ export class PowerUpManager {
     // Gold Coin Geometry & PBR Material
     this.coinGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 16);
     this.coinMat = new THREE.MeshStandardMaterial({
-      color: 0xfbbf24,
-      emissive: 0xf59e0b,
-      emissiveIntensity: 1.2,
+      color: 0xffd700,
+      emissive: 0xff9900,
+      emissiveIntensity: 1.5,
       metalness: 0.9,
       roughness: 0.1,
+      side: THREE.DoubleSide,
     });
   }
 
   /**
-   * Spawns coins in patterns (lines, arcs, curves) and occasional power-up items on a chunk
+   * Spawns coins on ground (y = 0.5), jump arcs over barriers (y = 1.8), and flying trails (y = 4.2).
    */
   public spawnCollectiblesForChunk(chunkZ: number): void {
-    const patternType = Math.floor(Math.random() * 3);
+    const patternType = Math.floor(Math.random() * 4);
     const lane = Math.floor(Math.random() * 3);
 
     if (patternType === 0) {
-      // Straight line pattern (5 coins)
+      // Straight Road Trail (5 coins on road surface)
       for (let i = 0; i < 5; i++) {
-        const z = chunkZ - (5 + i * 4);
-        this.spawnCoin(LANES[lane], 0.6, z, chunkZ);
+        const z = chunkZ - (4 + i * 4);
+        this.spawnCoin(LANES[lane], 0.5, z, chunkZ);
       }
     } else if (patternType === 1) {
-      // Jump Arc pattern (5 coins ascending & descending)
+      // Jump Arc Coins over low barriers (5 coins ascending to y = 1.8)
       for (let i = 0; i < 5; i++) {
-        const z = chunkZ - (5 + i * 4);
-        const y = 0.6 + Math.sin((i / 4) * Math.PI) * 1.5;
+        const z = chunkZ - (4 + i * 4);
+        const y = 0.5 + Math.sin((i / 4) * Math.PI) * 1.3; // Arc up to y = 1.8
         this.spawnCoin(LANES[lane], y, z, chunkZ);
       }
-    } else {
-      // Lane transition curve pattern
-      const startLane = Math.floor(Math.random() * 2);
+    } else if (patternType === 2) {
+      // Flying Sky Coin Trail (6 coins at y = 4.2 for Flying Jetpack Booster)
       for (let i = 0; i < 6; i++) {
-        const t = i / 5;
-        const x = THREE.MathUtils.lerp(LANES[startLane], LANES[startLane + 1], t);
-        const z = chunkZ - (4 + i * 4);
-        this.spawnCoin(x, 0.6, z, chunkZ);
+        const z = chunkZ - (3 + i * 4);
+        this.spawnCoin(LANES[lane], 4.2, z, chunkZ);
+      }
+    } else {
+      // Parallel Road Ground Trail (8 coins on road surface)
+      const laneA = (lane + 1) % 3;
+      for (let i = 0; i < 4; i++) {
+        const z = chunkZ - (5 + i * 5);
+        this.spawnCoin(LANES[lane], 0.5, z, chunkZ);
+        this.spawnCoin(LANES[laneA], 0.5, z, chunkZ);
       }
     }
 
-    // 25% Chance to spawn a Power-Up Item on this chunk
-    if (Math.random() < 0.25) {
-      const types: PowerUpType[] = ['MAGNET', 'SHIELD', 'BOOST', 'MULTIPLIER'];
+    // 40% Chance to spawn a Power-Up Item on this chunk
+    if (Math.random() < 0.4) {
+      const types: PowerUpType[] = ['MAGNET', 'SHIELD', 'BOOST', 'FLY', 'MULTIPLIER'];
       const selectedType = types[Math.floor(Math.random() * types.length)];
       const powerUpLane = Math.floor(Math.random() * 3);
-      this.spawnPowerUp(selectedType, LANES[powerUpLane], 1.2, chunkZ - 15, chunkZ);
+      this.spawnPowerUp(selectedType, LANES[powerUpLane], 0.8, chunkZ - 15, chunkZ);
     }
   }
 
@@ -171,17 +182,21 @@ export class PowerUpManager {
         color = 0xeab308; // Yellow
         emissive = 0xca8a04;
         break;
+      case 'FLY':
+        color = 0x10b981; // Emerald Green Jetpack
+        emissive = 0x059669;
+        break;
       case 'MULTIPLIER':
         color = 0xa855f7; // Purple
         emissive = 0x9333ea;
         break;
     }
 
-    const coreGeo = new THREE.OctahedronGeometry(0.5, 0);
+    const coreGeo = new THREE.OctahedronGeometry(0.55, 0);
     const coreMat = new THREE.MeshStandardMaterial({
       color,
       emissive,
-      emissiveIntensity: 2.0,
+      emissiveIntensity: 2.2,
       metalness: 0.8,
       roughness: 0.2,
     });
@@ -190,11 +205,11 @@ export class PowerUpManager {
     group.add(core);
 
     // Outer Ring Accent
-    const ringGeo = new THREE.TorusGeometry(0.7, 0.05, 8, 24);
+    const ringGeo = new THREE.TorusGeometry(0.75, 0.06, 8, 24);
     const ringMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       emissive: color,
-      emissiveIntensity: 1.5,
+      emissiveIntensity: 1.8,
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     group.add(ring);
@@ -219,9 +234,11 @@ export class PowerUpManager {
    * Main update loop for coin animations, magnet attraction, and power-up pickup collision checks
    */
   public update(delta: number, character: Character): void {
-    // 1. Update Active Power-Up Timers
+    // 1. Update Active Power-Up 10-Second Timers
     if (this.magnetTimer > 0) this.magnetTimer -= delta;
+    if (this.shieldTimer > 0) this.shieldTimer -= delta;
     if (this.boostTimer > 0) this.boostTimer -= delta;
+    if (this.flyTimer > 0) this.flyTimer -= delta;
     if (this.multiplierTimer > 0) this.multiplierTimer -= delta;
 
     const charPos = character.position;
@@ -235,15 +252,15 @@ export class PowerUpManager {
 
       const dist = coin.position.distanceTo(charPos);
 
-      // Coin Magnet Effect (attracts coins within 15 units if magnet active)
-      if (this.magnetTimer > 0 && dist < 15.0) {
-        const pullSpeed = 25.0 * delta;
+      // Coin Magnet Effect (attracts ground & air coins within 18 units if magnet active)
+      if (this.magnetTimer > 0 && dist < 18.0) {
+        const pullSpeed = 32.0 * delta;
         coin.position.lerp(charPos, pullSpeed);
         coin.mesh.position.copy(coin.position);
       }
 
-      // Pickup Collision Detection (< 1.2 units distance)
-      if (dist < 1.2) {
+      // Pickup Collision Detection (< 1.6 units distance for effortless pickup)
+      if (dist < 1.6) {
         coin.active = false;
         coin.mesh.visible = false;
         this.coinsCollectedCount += this.multiplierTimer > 0 ? 2 : 1;
@@ -259,7 +276,7 @@ export class PowerUpManager {
       item.group.rotation.y += 2.0 * delta;
 
       const dist = item.position.distanceTo(charPos);
-      if (dist < 1.5) {
+      if (dist < 1.6) {
         item.active = false;
         item.group.visible = false;
         this.activatePowerUp(item.type);
@@ -272,13 +289,16 @@ export class PowerUpManager {
   public activatePowerUp(type: PowerUpType): void {
     switch (type) {
       case 'MAGNET':
-        this.magnetTimer = 8.0;
+        this.magnetTimer = 10.0;
         break;
       case 'SHIELD':
-        this.shieldActive = true;
+        this.shieldTimer = 10.0;
         break;
       case 'BOOST':
-        this.boostTimer = 5.0;
+        this.boostTimer = 10.0;
+        break;
+      case 'FLY':
+        this.flyTimer = 10.0;
         break;
       case 'MULTIPLIER':
         this.multiplierTimer = 10.0;
@@ -288,8 +308,9 @@ export class PowerUpManager {
 
   public reset(): void {
     this.magnetTimer = 0;
-    this.shieldActive = false;
+    this.shieldTimer = 0;
     this.boostTimer = 0;
+    this.flyTimer = 0;
     this.multiplierTimer = 0;
     this.coinsCollectedCount = 0;
 

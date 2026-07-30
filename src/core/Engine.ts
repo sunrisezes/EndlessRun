@@ -14,6 +14,8 @@ import { PowerUpManager } from '../components/PowerUpManager';
 import { AudioManager } from '../audio/AudioManager';
 import { HUD } from '../ui/HUD';
 
+import { ThemeManager } from '../theme/ThemeManager';
+
 export class Engine {
   public scene: THREE.Scene;
   public renderer: THREE.WebGLRenderer;
@@ -26,6 +28,7 @@ export class Engine {
   public particleSystem: ParticleSystem;
   public powerUpManager: PowerUpManager;
   public audioManager: AudioManager;
+  public themeManager: ThemeManager;
   public hud: HUD;
   public composer: EffectComposer;
   public bloomPass: UnrealBloomPass;
@@ -38,19 +41,20 @@ export class Engine {
   constructor(container: HTMLElement) {
     // 1. Initialize Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0a12);
 
     // 2. Initialize Camera Manager
     const aspect = container.clientWidth / container.clientHeight;
     this.cameraManager = new CameraManager(aspect);
 
-    // 3. Initialize WebGL2 Renderer
+    // 3. Initialize WebGL2 Renderer with Transparent Alpha for Live Video Background
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
+      alpha: true,
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setClearColor(0x000000, 0.0);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -76,7 +80,9 @@ export class Engine {
     this.character = new Character(this.scene);
     this.obstaclePool = new ObstaclePool(this.scene);
     this.powerUpManager = new PowerUpManager(this.scene, this.particleSystem);
-    this.trackManager = new TrackManager(this.scene, this.obstaclePool);
+    this.trackManager = new TrackManager(this.scene, this.obstaclePool, this.powerUpManager);
+    this.themeManager = ThemeManager.getInstance();
+    this.themeManager.registerManagers(this.scene, this.lightingManager, this.trackManager);
 
     // 7. Glassmorphism HUD UI
     this.hud = new HUD(container);
@@ -86,6 +92,7 @@ export class Engine {
     // 8. Input Manager & Bindings
     this.inputManager = new InputManager();
     this.setupInputBindings();
+    this.hud.onAction = (action) => this.inputManager.trigger(action);
 
     this.clock = new THREE.Clock();
 
@@ -138,8 +145,8 @@ export class Engine {
 
   public restartGame(): void {
     this.character.reset();
-    this.trackManager.reset();
     this.powerUpManager.reset();
+    this.trackManager.reset();
     this.particleSystem.clearAll();
     this.isGameActive = true;
     this.character.state = 'RUNNING';
@@ -160,16 +167,16 @@ export class Engine {
     const delta = Math.min(this.clock.getDelta(), 0.05);
 
     if (this.isGameActive) {
-      // 1. Hyper Boost handling
+      // 1. Hyper Boost & Flying Camera handling
       const isBoosting = this.powerUpManager.boostTimer > 0;
-      this.cameraManager.setBoostFOV(isBoosting);
-      if (isBoosting) {
-        this.character.forwardSpeed = Math.max(this.character.forwardSpeed, 30.0);
-      }
+      const isFlying = this.powerUpManager.flyTimer > 0;
+      const isShielded = this.powerUpManager.shieldTimer > 0;
+
+      this.cameraManager.setBoostFOV(isBoosting || isFlying);
 
       // 2. Character Physics Update
-      this.character.update(delta);
-      this.character.shieldMesh.visible = this.powerUpManager.shieldActive;
+      this.character.update(delta, isFlying, isBoosting);
+      this.character.shieldMesh.visible = isShielded;
 
       // 3. Track Chunk Spawner Update
       this.trackManager.update(this.character.position.z);
@@ -178,7 +185,7 @@ export class Engine {
       this.powerUpManager.update(delta, this.character);
 
       // 5. Footstep Dust Particles
-      if (this.character.state === 'RUNNING') {
+      if (this.character.state === 'RUNNING' && !isFlying) {
         this.footstepTimer += delta;
         if (this.footstepTimer > 0.15) {
           this.footstepTimer = 0;
@@ -187,15 +194,16 @@ export class Engine {
       }
 
       // 6. Check Obstacle Collisions
-      if (this.character.state !== 'DEAD' && !isBoosting) {
+      if (this.character.state !== 'DEAD') {
         const hitObstacle = CollisionDetector.checkCollisions(this.character, this.obstaclePool);
         if (hitObstacle) {
-          if (this.powerUpManager.shieldActive) {
-            this.powerUpManager.shieldActive = false; // Shield absorbs hit
-            this.cameraManager.triggerShake(0.2, 0.2);
-            this.particleSystem.spawnCoinSparkle(this.character.position);
+          if (isShielded || isBoosting || isFlying) {
+            // Invincible Smash! Break through obstacle without taking damage for 10s
             hitObstacle.active = false;
             hitObstacle.group.visible = false;
+            this.cameraManager.triggerShake(0.15, 0.2);
+            this.particleSystem.spawnCrashExplosion(hitObstacle.group.position);
+            this.audioManager.playCrash();
           } else {
             // Player Death
             this.character.die();
@@ -216,11 +224,15 @@ export class Engine {
       const multiplier = this.powerUpManager.multiplierTimer > 0 ? 2 : 1;
       this.hud.updateHUD(distance, this.powerUpManager.coinsCollectedCount, multiplier, {
         magnetTimer: this.powerUpManager.magnetTimer,
-        shieldActive: this.powerUpManager.shieldActive,
+        shieldTimer: this.powerUpManager.shieldTimer,
         boostTimer: this.powerUpManager.boostTimer,
+        flyTimer: this.powerUpManager.flyTimer,
         multiplierTimer: this.powerUpManager.multiplierTimer,
       });
     }
+
+    // Update Theme 3D World Environment (Keep sky and 3D environment synced with player)
+    this.themeManager.update(delta, this.character.position.z);
 
     // Update Particles
     this.particleSystem.update(delta);

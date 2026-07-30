@@ -257,15 +257,19 @@ export class Character {
     this.playAnimation('run');
   }
 
-  public update(delta: number): void {
+  public update(delta: number, isFlying: boolean = false, isBoosting: boolean = false): void {
     if (this.state === 'IDLE') return;
 
-    // 1. Accelerate forward speed over time
+    // 1. Forward Speed & 5x Booster acceleration
     if (this.state !== 'DEAD') {
-      this.forwardSpeed = Math.min(
-        this.forwardSpeed + this.speedAcceleration * delta,
-        this.maxForwardSpeed
-      );
+      if (isBoosting) {
+        this.forwardSpeed = 85.0; // 5x Hyper Speed Booster!
+      } else {
+        this.forwardSpeed = Math.min(
+          this.forwardSpeed + this.speedAcceleration * delta,
+          this.maxForwardSpeed
+        );
+      }
       this.position.z -= this.forwardSpeed * delta;
     }
 
@@ -273,8 +277,14 @@ export class Character {
     const dampeningFactor = 1 - Math.exp(-22 * delta);
     this.position.x += (this.targetX - this.position.x) * dampeningFactor;
 
-    // 3. Jump Physics & Vertical Velocity
-    if (this.state === 'JUMPING' || this.position.y > 0) {
+    // 3. Flying Booster Altitude & Jump Physics
+    if (isFlying) {
+      // Smoothly ascend to sky altitude (y = 4.5u) above obstacles
+      const flyDamp = 1 - Math.exp(-8 * delta);
+      this.position.y += (4.5 - this.position.y) * flyDamp;
+      this.verticalVelocity = 0;
+      this.meshGroup.rotation.x = THREE.MathUtils.lerp(this.meshGroup.rotation.x, -Math.PI / 6, 0.2); // Flight tilt posture
+    } else if (this.state === 'JUMPING' || this.position.y > 0) {
       this.verticalVelocity += this.gravity * delta;
       this.position.y += this.verticalVelocity * delta;
 
@@ -299,7 +309,7 @@ export class Character {
         this.state = 'RUNNING';
         this.playAnimation('run');
       }
-    } else {
+    } else if (!isFlying) {
       this.meshGroup.scale.y = THREE.MathUtils.lerp(this.meshGroup.scale.y, 1.0, 0.2);
       this.meshGroup.rotation.x = THREE.MathUtils.lerp(this.meshGroup.rotation.x, 0.0, 0.2);
     }
