@@ -16,10 +16,10 @@
 Players can switch between **6 distinct thematic map worlds** instantly via the left-side Theme Selector panel:
 - 🏙️ **Cyber City (Default)**: Cyberpunk Metropolis with neon cyan grid lighting and volumetric atmospheric fog.
 - 🗽 **New York City**: Times Square night cityscape with warm gold skyscraper lights and amber curbs.
-- 🏮 **Tokyo (Shibuya Cyber Japan)**: Shibuya neon towers with Japanese Kanji light signs (`東京`, `渋谷`, `ネオン`) and pink/violet aurora horizons.
-- 🛺 **India Mumbai**: Mumbai coastal skyline with a warm golden sunset disc, amber dust particles, and saffron orange curbs.
+- 🏮 **Tokyo (Shibuya Cyber District)**: Shibuya neon towers with Japanese Kanji light signs (`東京`, `渋谷`, `ネオン`) and pink/violet aurora horizons.
+- 🌅 **Sunset Highway**: Coastal expressway skyline with a warm golden sunset disc, amber dust particles, and saffron orange curbs.
 - ❄️ **Antarctica**: Antarctic iceberg mountain peaks with diamond specular reflections, polar blue sky, and falling 3D snow.
-- 🌲 **Forest Russia**: Deep Russian Taiga pine forest line with rolling forest mist, floating emerald fireflies, and taiga green curbs.
+- 🌲 **Forest**: Lush green pine forest line with rolling forest mist, floating emerald fireflies, and vibrant green curbs.
 
 ---
 

@@ -41,16 +41,16 @@ export class ThemeManager {
       curbColor: 0xec4899,
       lightColor: 0xf472b6,
       skyColors: ['#10002b', '#4a0e4e', '#ec4899'],
-      description: 'Shibuya Cyber Neon Japan',
+      description: 'Shibuya Cyber Neon District',
     },
     {
-      id: 'mumbai',
-      name: 'India Mumbai',
-      icon: '🛺',
+      id: 'sunset_highway',
+      name: 'Sunset Highway',
+      icon: '🌅',
       curbColor: 0xf97316,
       lightColor: 0xfb923c,
       skyColors: ['#1c0a00', '#7c2d12', '#f97316'],
-      description: 'Golden Sunset & Mumbai Highway',
+      description: 'Golden Sunset & Coastal Expressway',
     },
     {
       id: 'antarctica',
@@ -62,13 +62,13 @@ export class ThemeManager {
       description: 'Icy Glaciers & Falling Snow',
     },
     {
-      id: 'russia',
-      name: 'Forest Russia',
+      id: 'forest',
+      name: 'Forest',
       icon: '🌲',
       curbColor: 0x22c55e,
       lightColor: 0x4ade80,
       skyColors: ['#01170c', '#064e3b', '#22c55e'],
-      description: 'Deep Russian Taiga Pine Forest',
+      description: 'Lush Green Pine Forest',
     },
   ];
 
@@ -297,8 +297,8 @@ export class ThemeManager {
         peak.position.set(i * 16, height / 2, -160 - Math.random() * 60);
         this.horizonGroup.add(peak);
       }
-    } else if (themeId === 'russia') {
-      // 3D Taiga Forest Pine Trees
+    } else if (themeId === 'forest') {
+      // 3D Forest Pine Trees
       const treeMat = new THREE.MeshStandardMaterial({
         color: 0x022c22,
         emissive: 0x22c55e,
@@ -316,9 +316,9 @@ export class ThemeManager {
         tree.position.set(i * 12, height / 2, -150 - Math.random() * 70);
         this.horizonGroup.add(tree);
       }
-    } else if (themeId === 'mumbai') {
-      // 3D Mumbai Coastal Towers & Golden Horizon
-      const mumbaiMat = new THREE.MeshStandardMaterial({
+    } else if (themeId === 'sunset_highway') {
+      // 3D Coastal Towers & Golden Horizon
+      const coastalMat = new THREE.MeshStandardMaterial({
         color: 0x180c04,
         emissive: 0xf97316,
         emissiveIntensity: 0.9,
@@ -332,7 +332,7 @@ export class ThemeManager {
         const width = Math.random() * 10 + 6;
 
         const geo = new THREE.BoxGeometry(width, height, width);
-        const tower = new THREE.Mesh(geo, mumbaiMat);
+        const tower = new THREE.Mesh(geo, coastalMat);
         tower.position.set(i * 13, height / 2, -160 - Math.random() * 60);
         this.horizonGroup.add(tower);
       }
